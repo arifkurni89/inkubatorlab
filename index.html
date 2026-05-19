@@ -22,8 +22,32 @@ body{
   background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
   display:flex;
   justify-content:center;
+  flex-direction:column;
+  align-items:center;
 }
 
+/* HEADER BARU */
+.header{
+  width:100%;
+  max-width:420px;
+  text-align:center;
+  margin-bottom:12px;
+  color:white;
+}
+
+.header h1{
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:1px;
+}
+
+.header p{
+  font-size:12px;
+  opacity:0.8;
+  margin-top:4px;
+}
+
+/* DASHBOARD */
 .dashboard{
   width:100%;
   max-width:420px;
@@ -86,6 +110,12 @@ body{
 
 <body>
 
+<!-- HEADER BARU -->
+<div class="header">
+  <h1>🧪 Inkubator Laboratorium</h1>
+  <p>Smart Monitoring System - Suhu & Kelembapan Real-Time</p>
+</div>
+
 <div class="dashboard">
 
   <div class="card timer">
@@ -132,9 +162,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-/* =========================
-   DATA REALTIME (WAJIB DI ATAS)
-========================= */
 let dataRealtime = {
   suhu: 0,
   kelembapan: 0,
@@ -144,21 +171,17 @@ let dataRealtime = {
 
 let dataLog = [];
 
-/* SUHU */
 database.ref("inkubator/suhu").on("value",(snap)=>{
   dataRealtime.suhu = snap.val();
   document.getElementById("suhu").innerHTML = dataRealtime.suhu;
 });
 
-/* KELEMBAPAN */
 database.ref("inkubator/kelembapan").on("value",(snap)=>{
   dataRealtime.kelembapan = snap.val();
   document.getElementById("kelembapan").innerHTML = dataRealtime.kelembapan;
 });
 
-/* TIMER */
 database.ref("inkubator/timer").on("value",(snap)=>{
-
   let t = snap.val() || 0;
 
   let h = Math.floor(t/3600);
@@ -171,15 +194,11 @@ database.ref("inkubator/timer").on("value",(snap)=>{
   document.getElementById("timer").innerHTML = dataRealtime.timer;
 });
 
-/* STATUS */
 database.ref("inkubator/status").on("value",(snap)=>{
   dataRealtime.status = (snap.val() || "standby").toUpperCase();
   document.getElementById("status").innerHTML = dataRealtime.status;
 });
 
-/* =========================
-   LOG DATA (ANTI DUPLIKAT)
-========================= */
 setInterval(() => {
   dataLog.push({
     waktu: new Date().toLocaleString(),
@@ -190,11 +209,7 @@ setInterval(() => {
   });
 }, 5000);
 
-/* =========================
-   DOWNLOAD CSV
-========================= */
 function downloadCSV(type){
-
   let csv = "";
 
   if(type === "suhu"){
@@ -204,7 +219,6 @@ function downloadCSV(type){
     });
     downloadFile(csv, "suhu_vs_waktu.csv");
   }
-
   else if(type === "kelembapan"){
     csv = "Waktu,Kelembapan\n";
     dataLog.forEach(row=>{
