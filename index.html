@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Incubator Dashboard</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:"Segoe UI", sans-serif;
+}
+
+body{
+  min-height:100vh;
+  padding:20px;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  display:flex;
+  justify-content:center;
+}
+
+.dashboard{
+  width:100%;
+  max-width:420px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.card{
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,0.2);
+  border-radius:18px;
+  padding:20px;
+  text-align:center;
+  color:white;
+}
+
+.timer{
+  border:1px solid rgba(0,255,170,0.4);
+  background:rgba(0,255,170,0.12);
+}
+
+.title{
+  font-size:16px;
+  margin-bottom:6px;
+  opacity:0.9;
+}
+
+.value{
+  font-size:44px;
+  font-weight:bold;
+}
+
+.status{
+  font-size:22px;
+  font-weight:bold;
+}
+
+.standby{ color:#ffd166; }
+.proses{ color:#ff6b6b; }
+.ready{ color:#06d6a0; }
+
+.btn{
+  background:#00c2ff;
+  color:white;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.btn:hover{
+  background:#009fd1;
+}
+</style>
+</head>
+
+<body>
+
+<div class="dashboard">
+
+  <div class="card timer">
+    <div class="title">⏳ Countdown Timer</div>
+    <div class="value" id="timer">00:00:00</div>
+  </div>
+
+  <div class="card">
+    <div class="title">🌡 Suhu</div>
+    <div class="value" id="suhu">0</div>
+  </div>
+
+  <div class="card">
+    <div class="title">💧 Kelembapan</div>
+    <div class="value" id="kelembapan">0</div>
+  </div>
+
+  <div class="card">
+    <div class="title">⚙ Status</div>
+    <div class="status" id="status">STANDBY</div>
+  </div>
+
+  <button class="btn" onclick="downloadCSV('suhu')">
+    📥 Download Suhu vs Waktu
+  </button>
+
+  <button class="btn" onclick="downloadCSV('kelembapan')">
+    📥 Download Kelembapan vs Waktu
+  </button>
+
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyATTlZdhuljeMGAwWqLLDgNz_NDIosH7ZI",
+  authDomain: "inkubatorlab-67763.firebaseapp.com",
+  databaseURL: "https://inkubatorlab-67763-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "inkubatorlab-67763",
+  storageBucket: "inkubatorlab-67763.firebasestorage.app",
+  messagingSenderId: "720919496287",
+  appId: "1:720919496287:web:655cb7fec63bb1047f7dea"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+/* =========================
+   DATA REALTIME (WAJIB DI ATAS)
+========================= */
+let dataRealtime = {
+  suhu: 0,
+  kelembapan: 0,
+  timer: "00:00:00",
+  status: "STANDBY"
+};
+
+let dataLog = [];
+
+/* SUHU */
+database.ref("inkubator/suhu").on("value",(snap)=>{
+  dataRealtime.suhu = snap.val();
+  document.getElementById("suhu").innerHTML = dataRealtime.suhu;
+});
+
+/* KELEMBAPAN */
+database.ref("inkubator/kelembapan").on("value",(snap)=>{
+  dataRealtime.kelembapan = snap.val();
+  document.getElementById("kelembapan").innerHTML = dataRealtime.kelembapan;
+});
+
+/* TIMER */
+database.ref("inkubator/timer").on("value",(snap)=>{
+
+  let t = snap.val() || 0;
+
+  let h = Math.floor(t/3600);
+  let m = Math.floor((t%3600)/60);
+  let s = t%60;
+
+  dataRealtime.timer =
+  `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  document.getElementById("timer").innerHTML = dataRealtime.timer;
+});
+
+/* STATUS */
+database.ref("inkubator/status").on("value",(snap)=>{
+  dataRealtime.status = (snap.val() || "standby").toUpperCase();
+  document.getElementById("status").innerHTML = dataRealtime.status;
+});
+
+/* =========================
+   LOG DATA (ANTI DUPLIKAT)
+========================= */
+setInterval(() => {
+  dataLog.push({
+    waktu: new Date().toLocaleString(),
+    suhu: dataRealtime.suhu,
+    kelembapan: dataRealtime.kelembapan,
+    timer: dataRealtime.timer,
+    status: dataRealtime.status
+  });
+}, 5000);
+
+/* =========================
+   DOWNLOAD CSV
+========================= */
+function downloadCSV(type){
+
+  let csv = "";
+
+  if(type === "suhu"){
+    csv = "Waktu,Suhu\n";
+    dataLog.forEach(row=>{
+      csv += `${row.waktu},${row.suhu}\n`;
+    });
+    downloadFile(csv, "suhu_vs_waktu.csv");
+  }
+
+  else if(type === "kelembapan"){
+    csv = "Waktu,Kelembapan\n";
+    dataLog.forEach(row=>{
+      csv += `${row.waktu},${row.kelembapan}\n`;
+    });
+    downloadFile(csv, "kelembapan_vs_waktu.csv");
+  }
+}
+
+function downloadFile(csv, filename){
+  let blob = new Blob([csv], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+</script>
+
+</body>
+</html>
